@@ -1,0 +1,24 @@
+# Data processing & numerical computation
+numpy>=1.18.0
+pandas>=1.0.0
+scipy>=1.4.0
+
+# Visualization
+matplotlib>=3.1.0
+seaborn>=0.10.0
+
+# Machine learning & optimization
+scikit-learn>=0.22.0
+cvxpy>=1.1.0
+
+# Deep Learning (using PyTorch)
+torch>=1.7.0
+
+# Transformer / Performer implementation (if using an available package)
+performer-pytorch>=0.0.4  # or replace with your specific package if different
+
+# Configuration & YAML file support
+pyyaml>=5.3.1
+
+# Other utilities (if needed)
+tqdm>=4.40.0

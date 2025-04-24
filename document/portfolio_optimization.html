@@ -1,0 +1,1358 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.5.52">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Krishna">
+<meta name="dcterms.date" content="2025-03-17">
+
+<title>Portfolio Optimization using the Performer Model</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { display: inline-block; text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="portfolio_optimization_files/libs/clipboard/clipboard.min.js"></script>
+<script src="portfolio_optimization_files/libs/quarto-html/quarto.js"></script>
+<script src="portfolio_optimization_files/libs/quarto-html/popper.min.js"></script>
+<script src="portfolio_optimization_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="portfolio_optimization_files/libs/quarto-html/anchor.min.js"></script>
+<link href="portfolio_optimization_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="portfolio_optimization_files/libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="portfolio_optimization_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="portfolio_optimization_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="portfolio_optimization_files/libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN") {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
+
+</head>
+
+<body>
+
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
+<div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+  <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul>
+  <li><a href="#introduction" id="toc-introduction" class="nav-link active" data-scroll-target="#introduction"><span class="header-section-number">1</span> Introduction</a>
+  <ul class="collapse">
+  <li><a href="#objectives" id="toc-objectives" class="nav-link" data-scroll-target="#objectives"><span class="header-section-number">1.1</span> Objectives</a></li>
+  <li><a href="#dataset" id="toc-dataset" class="nav-link" data-scroll-target="#dataset"><span class="header-section-number">1.2</span> Dataset</a></li>
+  </ul></li>
+  <li><a href="#theoretical-background" id="toc-theoretical-background" class="nav-link" data-scroll-target="#theoretical-background"><span class="header-section-number">2</span> Theoretical Background</a>
+  <ul class="collapse">
+  <li><a href="#mean-variance-optimization-mvo" id="toc-mean-variance-optimization-mvo" class="nav-link" data-scroll-target="#mean-variance-optimization-mvo"><span class="header-section-number">2.1</span> Mean-Variance Optimization (MVO)</a></li>
+  <li><a href="#performer-model-linear-attention-transformer" id="toc-performer-model-linear-attention-transformer" class="nav-link" data-scroll-target="#performer-model-linear-attention-transformer"><span class="header-section-number">2.2</span> Performer Model (Linear Attention Transformer)</a></li>
+  </ul></li>
+  <li><a href="#implementation" id="toc-implementation" class="nav-link" data-scroll-target="#implementation"><span class="header-section-number">3</span> Implementation</a>
+  <ul class="collapse">
+  <li><a href="#setup-and-data-loading" id="toc-setup-and-data-loading" class="nav-link" data-scroll-target="#setup-and-data-loading"><span class="header-section-number">3.1</span> Setup and Data Loading</a></li>
+  <li><a href="#mean-variance-optimization-implementation" id="toc-mean-variance-optimization-implementation" class="nav-link" data-scroll-target="#mean-variance-optimization-implementation"><span class="header-section-number">3.2</span> Mean-Variance Optimization Implementation</a></li>
+  <li><a href="#performer-model-implementation" id="toc-performer-model-implementation" class="nav-link" data-scroll-target="#performer-model-implementation"><span class="header-section-number">3.3</span> Performer Model Implementation</a></li>
+  </ul></li>
+  <li><a href="#performance-comparison" id="toc-performance-comparison" class="nav-link" data-scroll-target="#performance-comparison"><span class="header-section-number">4</span> Performance Comparison</a></li>
+  <li><a href="#analysis-and-discussion" id="toc-analysis-and-discussion" class="nav-link" data-scroll-target="#analysis-and-discussion"><span class="header-section-number">5</span> Analysis and Discussion</a>
+  <ul class="collapse">
+  <li><a href="#comparison-of-weight-allocations" id="toc-comparison-of-weight-allocations" class="nav-link" data-scroll-target="#comparison-of-weight-allocations"><span class="header-section-number">5.1</span> Comparison of Weight Allocations</a></li>
+  <li><a href="#performance-metrics-comparison" id="toc-performance-metrics-comparison" class="nav-link" data-scroll-target="#performance-metrics-comparison"><span class="header-section-number">5.2</span> Performance Metrics Comparison</a></li>
+  <li><a href="#strengths-and-limitations" id="toc-strengths-and-limitations" class="nav-link" data-scroll-target="#strengths-and-limitations"><span class="header-section-number">5.3</span> Strengths and Limitations</a>
+  <ul class="collapse">
+  <li><a href="#mean-variance-optimization" id="toc-mean-variance-optimization" class="nav-link" data-scroll-target="#mean-variance-optimization"><span class="header-section-number">5.3.1</span> Mean-Variance Optimization</a></li>
+  <li><a href="#performer-model" id="toc-performer-model" class="nav-link" data-scroll-target="#performer-model"><span class="header-section-number">5.3.2</span> Performer Model</a></li>
+  </ul></li>
+  </ul></li>
+  <li><a href="#conclusion" id="toc-conclusion" class="nav-link" data-scroll-target="#conclusion"><span class="header-section-number">6</span> Conclusion</a></li>
+  <li><a href="#references" id="toc-references" class="nav-link" data-scroll-target="#references"><span class="header-section-number">7</span> References</a></li>
+  </ul>
+</nav>
+</div>
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Portfolio Optimization using the Performer Model</h1>
+<p class="subtitle lead">Comparing Linear Attention Transformer with Mean-Variance Optimization</p>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    <div>
+    <div class="quarto-title-meta-heading">Author</div>
+    <div class="quarto-title-meta-contents">
+             <p>Krishna </p>
+          </div>
+  </div>
+    
+    <div>
+    <div class="quarto-title-meta-heading">Published</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date">March 17, 2025</p>
+    </div>
+  </div>
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<section id="introduction" class="level1" data-number="1">
+<h1 data-number="1"><span class="header-section-number">1</span> Introduction</h1>
+<p>Portfolio optimization is a critical task in finance that aims to allocate assets in a way that maximizes returns while minimizing risk. Traditional approaches like Mean-Variance Optimization (MVO) have been the cornerstone of modern portfolio theory since Harry Markowitz’s seminal work in 1952. However, with the advancement of machine learning and deep learning techniques, new approaches have emerged that can potentially capture more complex patterns and relationships in financial data.</p>
+<p>This document explores the application of the Performer Model, a linear attention transformer architecture, to portfolio optimization and compares its performance with traditional Mean-Variance Optimization. The Performer Model offers several advantages, including linear computational complexity and the ability to model complex non-linear relationships in financial time series data.</p>
+<section id="objectives" class="level2" data-number="1.1">
+<h2 data-number="1.1" class="anchored" data-anchor-id="objectives"><span class="header-section-number">1.1</span> Objectives</h2>
+<ol type="1">
+<li>Implement the Performer Model (Linear Attention Transformer) for portfolio optimization</li>
+<li>Implement traditional Mean-Variance Optimization (MVO)</li>
+<li>Compare the performance of both approaches using various metrics</li>
+<li>Analyze the strengths and weaknesses of each approach</li>
+</ol>
+</section>
+<section id="dataset" class="level2" data-number="1.2">
+<h2 data-number="1.2" class="anchored" data-anchor-id="dataset"><span class="header-section-number">1.2</span> Dataset</h2>
+<p>We will use historical stock price data from major indices obtained through the Yahoo Finance API. This will allow us to test our models on real-world financial data and evaluate their performance in practical scenarios.</p>
+</section>
+</section>
+<section id="theoretical-background" class="level1" data-number="2">
+<h1 data-number="2"><span class="header-section-number">2</span> Theoretical Background</h1>
+<section id="mean-variance-optimization-mvo" class="level2" data-number="2.1">
+<h2 data-number="2.1" class="anchored" data-anchor-id="mean-variance-optimization-mvo"><span class="header-section-number">2.1</span> Mean-Variance Optimization (MVO)</h2>
+<p>Mean-Variance Optimization is a mathematical framework for assembling a portfolio of assets such that the expected return is maximized for a given level of risk. It is based on the following principles:</p>
+<ol type="1">
+<li>Portfolio return is the proportion-weighted combination of the constituent assets’ returns</li>
+<li>Portfolio risk (variance) is a function of the correlations between component assets</li>
+<li>Investors are risk-averse and prefer portfolios with higher expected returns and lower risk</li>
+</ol>
+<p>The mathematical formulation of MVO is as follows:</p>
+<p><span class="math display">\[
+\begin{align}
+\text{Maximize } &amp; \mu_p = \sum_{i=1}^{n} w_i \mu_i \\
+\text{Subject to } &amp; \sigma_p^2 = \sum_{i=1}^{n} \sum_{j=1}^{n} w_i w_j \sigma_i \sigma_j \rho_{ij} \leq \sigma_{\text{target}}^2 \\
+&amp; \sum_{i=1}^{n} w_i = 1 \\
+&amp; w_i \geq 0, \forall i \in \{1, 2, \ldots, n\}
+\end{align}
+\]</span></p>
+<p>where: - <span class="math inline">\(\mu_p\)</span> is the expected return of the portfolio - <span class="math inline">\(\mu_i\)</span> is the expected return of asset <span class="math inline">\(i\)</span> - <span class="math inline">\(w_i\)</span> is the weight of asset <span class="math inline">\(i\)</span> in the portfolio - <span class="math inline">\(\sigma_p^2\)</span> is the variance of the portfolio - <span class="math inline">\(\sigma_i\)</span> is the standard deviation of asset <span class="math inline">\(i\)</span> - <span class="math inline">\(\rho_{ij}\)</span> is the correlation coefficient between assets <span class="math inline">\(i\)</span> and <span class="math inline">\(j\)</span> - <span class="math inline">\(\sigma_{\text{target}}^2\)</span> is the target variance level</p>
+</section>
+<section id="performer-model-linear-attention-transformer" class="level2" data-number="2.2">
+<h2 data-number="2.2" class="anchored" data-anchor-id="performer-model-linear-attention-transformer"><span class="header-section-number">2.2</span> Performer Model (Linear Attention Transformer)</h2>
+<p>The Performer Model is a Transformer architecture that uses a novel Fast Attention Via positive Orthogonal Random features approach (FAVOR+) to approximate the attention mechanism with linear complexity instead of quadratic complexity. This makes it suitable for processing long sequences of financial data efficiently.</p>
+<p>Traditional Transformer attention is computed as:</p>
+<p><span class="math display">\[\text{Attention}(Q, K, V) = \text{softmax}\left(\frac{QK^T}{\sqrt{d_k}}\right)V\]</span></p>
+<p>where <span class="math inline">\(Q\)</span>, <span class="math inline">\(K\)</span>, and <span class="math inline">\(V\)</span> are the query, key, and value matrices, and <span class="math inline">\(d_k\)</span> is the dimension of the keys.</p>
+<p>The Performer replaces this with a linear attention mechanism:</p>
+<p><span class="math display">\[\text{LinearAttention}(Q, K, V) = \phi(Q)(\phi(K)^T V)\]</span></p>
+<p>where <span class="math inline">\(\phi\)</span> is a feature map that approximates the softmax kernel. This reduces the computational complexity from <span class="math inline">\(O(n^2)\)</span> to <span class="math inline">\(O(n)\)</span>, where <span class="math inline">\(n\)</span> is the sequence length.</p>
+<p>For portfolio optimization, the Performer can process historical price sequences and learn complex patterns that may not be captured by traditional statistical methods like MVO.</p>
+</section>
+</section>
+<section id="implementation" class="level1" data-number="3">
+<h1 data-number="3"><span class="header-section-number">3</span> Implementation</h1>
+<section id="setup-and-data-loading" class="level2" data-number="3.1">
+<h2 data-number="3.1" class="anchored" data-anchor-id="setup-and-data-loading"><span class="header-section-number">3.1</span> Setup and Data Loading</h2>
+<p>First, let’s set up our environment and load the necessary libraries:</p>
+<div id="fd164d66" class="cell" data-execution_count="1">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Import necessary libraries</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> seaborn <span class="im">as</span> sns</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> yfinance <span class="im">as</span> yf</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> datetime <span class="im">import</span> datetime, timedelta</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> scipy.optimize <span class="im">import</span> minimize</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> torch</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> torch.nn <span class="im">as</span> nn</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> torch.optim <span class="im">as</span> optim</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sklearn.preprocessing <span class="im">import</span> StandardScaler</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sklearn.model_selection <span class="im">import</span> train_test_split</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a><span class="co"># Set random seeds for reproducibility</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>np.random.seed(<span class="dv">42</span>)</span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>torch.manual_seed(<span class="dv">42</span>)</span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a><span class="co"># Set plotting style</span></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>sns.set_style(<span class="st">'whitegrid'</span>)</span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>plt.rcParams[<span class="st">'figure.figsize'</span>] <span class="op">=</span> (<span class="dv">12</span>, <span class="dv">8</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+<p>Now, let’s load historical stock data using the Yahoo Finance API:</p>
+<div id="8d6d6e9c" class="cell" data-execution_count="2">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> scipy.optimize <span class="im">import</span> minimize</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Define the list of stocks to include in our portfolio</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>stocks <span class="op">=</span> [<span class="st">'AAPL'</span>, <span class="st">'MSFT'</span>, <span class="st">'AMZN'</span>, <span class="st">'GOOGL'</span>, <span class="st">'META'</span>, <span class="st">'TSLA'</span>, <span class="st">'NVDA'</span>, <span class="st">'JPM'</span>, <span class="st">'V'</span>, <span class="st">'JNJ'</span>]</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Load data</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>clean_data_dir <span class="op">=</span> <span class="st">'c:/Users/krish/OneDrive/Desktop/Research-Portfolio Optimization/data/clean_data'</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>clean_data_path <span class="op">=</span> os.path.join(clean_data_dir, <span class="st">'stock_data_clean.csv'</span>)</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>df_clean <span class="op">=</span> pd.read_csv(clean_data_path)</span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a><span class="co"># Select stocks from predefined list with exact "Close" columns</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>close_columns <span class="op">=</span> [col <span class="cf">for</span> col <span class="kw">in</span> df_clean.columns <span class="cf">if</span> <span class="bu">any</span>(stock <span class="kw">in</span> col <span class="cf">for</span> stock <span class="kw">in</span> stocks) <span class="kw">and</span> col.endswith(<span class="st">'Close'</span>)]</span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>returns <span class="op">=</span> df_clean[close_columns].pct_change().dropna()</span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a><span class="co"># Display the first few rows of the returns data</span></span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(returns.head())</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code>   META_Close  JNJ_Close   V_Close  NVDA_Close  CVX_Close  AVGO_Close  \
+1    0.011893  -0.003398  0.013869    0.024380   0.003120    0.016958   
+2    0.203176  -0.011051  0.000469    0.049709   0.029414    0.020275   
+3   -0.032801  -0.005172 -0.005772    0.047944   0.000591    0.015323   
+4   -0.010209   0.014506  0.004282   -0.015995   0.000131   -0.016451   
+5    0.032701  -0.000506  0.009503    0.027498  -0.001444    0.028144   
+
+   TSLA_Close  AMZN_Close  MSFT_Close  ABBV_Close  JPM_Close  AAPL_Close  
+1    0.008383    0.026289    0.015594    0.019404  -0.003613    0.013341  
+2   -0.005030    0.078666    0.018426    0.006444   0.005756   -0.005405  
+3   -0.036454   -0.008731   -0.013545    0.015355  -0.001316    0.009847  
+4    0.022313   -0.006811   -0.000395    0.011853   0.003439    0.008632  
+5    0.013398    0.008158    0.021110    0.009926   0.001885    0.000581  </code></pre>
+</div>
+</div>
+</section>
+<section id="mean-variance-optimization-implementation" class="level2" data-number="3.2">
+<h2 data-number="3.2" class="anchored" data-anchor-id="mean-variance-optimization-implementation"><span class="header-section-number">3.2</span> Mean-Variance Optimization Implementation</h2>
+<p>Let’s implement the traditional Mean-Variance Optimization approach:</p>
+<div id="98c58dfb" class="cell" data-execution_count="3">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> calculate_portfolio_performance(weights, returns):</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    <span class="co">"""</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="co">    Calculate portfolio performance metrics: return, volatility, Sharpe ratio</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="co">    """</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Expected portfolio return</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>    portfolio_return <span class="op">=</span> np.<span class="bu">sum</span>(returns.mean() <span class="op">*</span> weights) <span class="op">*</span> <span class="dv">252</span>  <span class="co"># Annualized</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Expected portfolio volatility</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>    portfolio_volatility <span class="op">=</span> np.sqrt(np.dot(weights.T, np.dot(returns.cov() <span class="op">*</span> <span class="dv">252</span>, weights)))</span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Sharpe ratio (assuming risk-free rate of 0 for simplicity)</span></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>    sharpe_ratio <span class="op">=</span> portfolio_return <span class="op">/</span> portfolio_volatility</span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> portfolio_return, portfolio_volatility, sharpe_ratio</span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> negative_sharpe_ratio(weights, returns):</span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a>    <span class="co">"""</span></span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a><span class="co">    Returns the negative Sharpe ratio (for minimization)</span></span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a><span class="co">    """</span></span>
+<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="op">-</span>calculate_portfolio_performance(weights, returns)[<span class="dv">2</span>]</span>
+<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> optimize_portfolio(returns):</span>
+<span id="cb4-23"><a href="#cb4-23" aria-hidden="true" tabindex="-1"></a>    <span class="co">"""</span></span>
+<span id="cb4-24"><a href="#cb4-24" aria-hidden="true" tabindex="-1"></a><span class="co">    Perform Mean-Variance Optimization to find the optimal portfolio weights</span></span>
+<span id="cb4-25"><a href="#cb4-25" aria-hidden="true" tabindex="-1"></a><span class="co">    """</span></span>
+<span id="cb4-26"><a href="#cb4-26" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Number of assets</span></span>
+<span id="cb4-27"><a href="#cb4-27" aria-hidden="true" tabindex="-1"></a>    num_assets <span class="op">=</span> <span class="bu">len</span>(returns.columns)</span>
+<span id="cb4-28"><a href="#cb4-28" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb4-29"><a href="#cb4-29" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Initial guess (equal weights)</span></span>
+<span id="cb4-30"><a href="#cb4-30" aria-hidden="true" tabindex="-1"></a>    init_weights <span class="op">=</span> np.array([<span class="fl">1.0</span><span class="op">/</span>num_assets] <span class="op">*</span> num_assets)</span>
+<span id="cb4-31"><a href="#cb4-31" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb4-32"><a href="#cb4-32" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Constraints: weights sum to 1</span></span>
+<span id="cb4-33"><a href="#cb4-33" aria-hidden="true" tabindex="-1"></a>    constraints <span class="op">=</span> ({<span class="st">'type'</span>: <span class="st">'eq'</span>, <span class="st">'fun'</span>: <span class="kw">lambda</span> x: np.<span class="bu">sum</span>(x) <span class="op">-</span> <span class="dv">1</span>})</span>
+<span id="cb4-34"><a href="#cb4-34" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb4-35"><a href="#cb4-35" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Bounds: no short selling (weights between 0 and 1)</span></span>
+<span id="cb4-36"><a href="#cb4-36" aria-hidden="true" tabindex="-1"></a>    bounds <span class="op">=</span> <span class="bu">tuple</span>((<span class="dv">0</span>, <span class="dv">1</span>) <span class="cf">for</span> asset <span class="kw">in</span> <span class="bu">range</span>(num_assets))</span>
+<span id="cb4-37"><a href="#cb4-37" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb4-38"><a href="#cb4-38" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Optimize for maximum Sharpe ratio</span></span>
+<span id="cb4-39"><a href="#cb4-39" aria-hidden="true" tabindex="-1"></a>    result <span class="op">=</span> minimize(negative_sharpe_ratio, init_weights, args<span class="op">=</span>(returns,), </span>
+<span id="cb4-40"><a href="#cb4-40" aria-hidden="true" tabindex="-1"></a>                      method<span class="op">=</span><span class="st">'SLSQP'</span>, bounds<span class="op">=</span>bounds, constraints<span class="op">=</span>constraints)</span>
+<span id="cb4-41"><a href="#cb4-41" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb4-42"><a href="#cb4-42" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Get the optimized weights</span></span>
+<span id="cb4-43"><a href="#cb4-43" aria-hidden="true" tabindex="-1"></a>    optimal_weights <span class="op">=</span> result[<span class="st">'x'</span>]</span>
+<span id="cb4-44"><a href="#cb4-44" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb4-45"><a href="#cb4-45" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Calculate performance metrics with optimized weights</span></span>
+<span id="cb4-46"><a href="#cb4-46" aria-hidden="true" tabindex="-1"></a>    performance <span class="op">=</span> calculate_portfolio_performance(optimal_weights, returns)</span>
+<span id="cb4-47"><a href="#cb4-47" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb4-48"><a href="#cb4-48" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> optimal_weights, performance</span>
+<span id="cb4-49"><a href="#cb4-49" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-50"><a href="#cb4-50" aria-hidden="true" tabindex="-1"></a><span class="co"># Run Mean-Variance Optimization</span></span>
+<span id="cb4-51"><a href="#cb4-51" aria-hidden="true" tabindex="-1"></a>mvo_weights, mvo_performance <span class="op">=</span> optimize_portfolio(returns)</span>
+<span id="cb4-52"><a href="#cb4-52" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-53"><a href="#cb4-53" aria-hidden="true" tabindex="-1"></a><span class="co"># Display the results</span></span>
+<span id="cb4-54"><a href="#cb4-54" aria-hidden="true" tabindex="-1"></a>mvo_results <span class="op">=</span> pd.DataFrame({</span>
+<span id="cb4-55"><a href="#cb4-55" aria-hidden="true" tabindex="-1"></a>    <span class="st">'Asset'</span>: returns.columns,</span>
+<span id="cb4-56"><a href="#cb4-56" aria-hidden="true" tabindex="-1"></a>    <span class="st">'Weight'</span>: mvo_weights</span>
+<span id="cb4-57"><a href="#cb4-57" aria-hidden="true" tabindex="-1"></a>})</span>
+<span id="cb4-58"><a href="#cb4-58" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-59"><a href="#cb4-59" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">"Mean-Variance Optimization Results:"</span>)</span>
+<span id="cb4-60"><a href="#cb4-60" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Expected Annual Return: </span><span class="sc">{</span>mvo_performance[<span class="dv">0</span>]<span class="sc">:.4f}</span><span class="ss">"</span>)</span>
+<span id="cb4-61"><a href="#cb4-61" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Expected Annual Volatility: </span><span class="sc">{</span>mvo_performance[<span class="dv">1</span>]<span class="sc">:.4f}</span><span class="ss">"</span>)</span>
+<span id="cb4-62"><a href="#cb4-62" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Sharpe Ratio: </span><span class="sc">{</span>mvo_performance[<span class="dv">2</span>]<span class="sc">:.4f}</span><span class="ss">"</span>)</span>
+<span id="cb4-63"><a href="#cb4-63" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">"</span><span class="ch">\n</span><span class="st">Optimal Portfolio Weights:"</span>)</span>
+<span id="cb4-64"><a href="#cb4-64" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(mvo_results)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code>Mean-Variance Optimization Results:
+Expected Annual Return: 0.3217
+Expected Annual Volatility: 0.1372
+Sharpe Ratio: 2.3448
+
+Optimal Portfolio Weights:
+         Asset        Weight
+0   META_Close  1.054186e-01
+1    JNJ_Close  2.133362e-01
+2      V_Close  8.423072e-02
+3   NVDA_Close  1.218212e-01
+4    CVX_Close  1.683505e-02
+5   AVGO_Close  2.797209e-02
+6   TSLA_Close  5.642671e-03
+7   AMZN_Close  1.576081e-17
+8   MSFT_Close  3.586941e-16
+9   ABBV_Close  2.483961e-01
+10   JPM_Close  1.563749e-01
+11  AAPL_Close  1.997245e-02</code></pre>
+</div>
+</div>
+</section>
+<section id="performer-model-implementation" class="level2" data-number="3.3">
+<h2 data-number="3.3" class="anchored" data-anchor-id="performer-model-implementation"><span class="header-section-number">3.3</span> Performer Model Implementation</h2>
+<p>Now, let’s implement the Performer Model for portfolio optimization:</p>
+<div id="7b9c6353" class="cell" data-execution_count="4">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> PerformerAttention(nn.Module):</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>    <span class="co">"""</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="co">    Linear attention mechanism used in the Performer model</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a><span class="co">    """</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__init__</span>(<span class="va">self</span>, dim, num_heads<span class="op">=</span><span class="dv">8</span>, kernel_fn<span class="op">=</span>nn.ReLU(), eps<span class="op">=</span><span class="fl">1e-6</span>):</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>        <span class="bu">super</span>().<span class="fu">__init__</span>()</span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.dim <span class="op">=</span> dim</span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.num_heads <span class="op">=</span> num_heads</span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.head_dim <span class="op">=</span> dim <span class="op">//</span> num_heads</span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.scale <span class="op">=</span> <span class="va">self</span>.head_dim <span class="op">**</span> <span class="op">-</span><span class="fl">0.5</span></span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.kernel_fn <span class="op">=</span> kernel_fn</span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.eps <span class="op">=</span> eps</span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Linear projections for Q, K, V</span></span>
+<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.to_q <span class="op">=</span> nn.Linear(dim, dim)</span>
+<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.to_k <span class="op">=</span> nn.Linear(dim, dim)</span>
+<span id="cb6-17"><a href="#cb6-17" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.to_v <span class="op">=</span> nn.Linear(dim, dim)</span>
+<span id="cb6-18"><a href="#cb6-18" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.to_out <span class="op">=</span> nn.Linear(dim, dim)</span>
+<span id="cb6-19"><a href="#cb6-19" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb6-20"><a href="#cb6-20" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> forward(<span class="va">self</span>, x):</span>
+<span id="cb6-21"><a href="#cb6-21" aria-hidden="true" tabindex="-1"></a>        b, n, d <span class="op">=</span> x.shape</span>
+<span id="cb6-22"><a href="#cb6-22" aria-hidden="true" tabindex="-1"></a>        h <span class="op">=</span> <span class="va">self</span>.num_heads</span>
+<span id="cb6-23"><a href="#cb6-23" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb6-24"><a href="#cb6-24" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Project inputs to queries, keys and values</span></span>
+<span id="cb6-25"><a href="#cb6-25" aria-hidden="true" tabindex="-1"></a>        q <span class="op">=</span> <span class="va">self</span>.to_q(x).reshape(b, n, h, <span class="va">self</span>.head_dim).transpose(<span class="dv">1</span>, <span class="dv">2</span>)</span>
+<span id="cb6-26"><a href="#cb6-26" aria-hidden="true" tabindex="-1"></a>        k <span class="op">=</span> <span class="va">self</span>.to_k(x).reshape(b, n, h, <span class="va">self</span>.head_dim).transpose(<span class="dv">1</span>, <span class="dv">2</span>)</span>
+<span id="cb6-27"><a href="#cb6-27" aria-hidden="true" tabindex="-1"></a>        v <span class="op">=</span> <span class="va">self</span>.to_v(x).reshape(b, n, h, <span class="va">self</span>.head_dim).transpose(<span class="dv">1</span>, <span class="dv">2</span>)</span>
+<span id="cb6-28"><a href="#cb6-28" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb6-29"><a href="#cb6-29" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Apply kernel feature map</span></span>
+<span id="cb6-30"><a href="#cb6-30" aria-hidden="true" tabindex="-1"></a>        q <span class="op">=</span> <span class="va">self</span>.kernel_fn(q <span class="op">*</span> <span class="va">self</span>.scale)</span>
+<span id="cb6-31"><a href="#cb6-31" aria-hidden="true" tabindex="-1"></a>        k <span class="op">=</span> <span class="va">self</span>.kernel_fn(k <span class="op">*</span> <span class="va">self</span>.scale)</span>
+<span id="cb6-32"><a href="#cb6-32" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb6-33"><a href="#cb6-33" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Linear attention</span></span>
+<span id="cb6-34"><a href="#cb6-34" aria-hidden="true" tabindex="-1"></a>        k_cumsum <span class="op">=</span> k.<span class="bu">sum</span>(dim<span class="op">=</span><span class="dv">2</span>, keepdim<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb6-35"><a href="#cb6-35" aria-hidden="true" tabindex="-1"></a>        D_inv <span class="op">=</span> <span class="fl">1.</span> <span class="op">/</span> (torch.einsum(<span class="st">'bhnd,bhnd-&gt;bhn'</span>, q, k_cumsum) <span class="op">+</span> <span class="va">self</span>.eps)</span>
+<span id="cb6-36"><a href="#cb6-36" aria-hidden="true" tabindex="-1"></a>        context <span class="op">=</span> torch.einsum(<span class="st">'bhnd,bhne-&gt;bhde'</span>, k, v)</span>
+<span id="cb6-37"><a href="#cb6-37" aria-hidden="true" tabindex="-1"></a>        out <span class="op">=</span> torch.einsum(<span class="st">'bhnd,bhde,bhn-&gt;bhne'</span>, q, context, D_inv)</span>
+<span id="cb6-38"><a href="#cb6-38" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb6-39"><a href="#cb6-39" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Merge heads and combine with output projection</span></span>
+<span id="cb6-40"><a href="#cb6-40" aria-hidden="true" tabindex="-1"></a>        out <span class="op">=</span> out.transpose(<span class="dv">1</span>, <span class="dv">2</span>).reshape(b, n, d)</span>
+<span id="cb6-41"><a href="#cb6-41" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="va">self</span>.to_out(out)</span>
+<span id="cb6-42"><a href="#cb6-42" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-43"><a href="#cb6-43" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> PerformerBlock(nn.Module):</span>
+<span id="cb6-44"><a href="#cb6-44" aria-hidden="true" tabindex="-1"></a>    <span class="co">"""</span></span>
+<span id="cb6-45"><a href="#cb6-45" aria-hidden="true" tabindex="-1"></a><span class="co">    Transformer block using Performer attention</span></span>
+<span id="cb6-46"><a href="#cb6-46" aria-hidden="true" tabindex="-1"></a><span class="co">    """</span></span>
+<span id="cb6-47"><a href="#cb6-47" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__init__</span>(<span class="va">self</span>, dim, num_heads<span class="op">=</span><span class="dv">8</span>, mlp_dim<span class="op">=</span><span class="dv">256</span>, dropout<span class="op">=</span><span class="fl">0.1</span>):</span>
+<span id="cb6-48"><a href="#cb6-48" aria-hidden="true" tabindex="-1"></a>        <span class="bu">super</span>().<span class="fu">__init__</span>()</span>
+<span id="cb6-49"><a href="#cb6-49" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.norm1 <span class="op">=</span> nn.LayerNorm(dim)</span>
+<span id="cb6-50"><a href="#cb6-50" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.attn <span class="op">=</span> PerformerAttention(dim, num_heads<span class="op">=</span>num_heads)</span>
+<span id="cb6-51"><a href="#cb6-51" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.norm2 <span class="op">=</span> nn.LayerNorm(dim)</span>
+<span id="cb6-52"><a href="#cb6-52" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.mlp <span class="op">=</span> nn.Sequential(</span>
+<span id="cb6-53"><a href="#cb6-53" aria-hidden="true" tabindex="-1"></a>            nn.Linear(dim, mlp_dim),</span>
+<span id="cb6-54"><a href="#cb6-54" aria-hidden="true" tabindex="-1"></a>            nn.GELU(),</span>
+<span id="cb6-55"><a href="#cb6-55" aria-hidden="true" tabindex="-1"></a>            nn.Dropout(dropout),</span>
+<span id="cb6-56"><a href="#cb6-56" aria-hidden="true" tabindex="-1"></a>            nn.Linear(mlp_dim, dim),</span>
+<span id="cb6-57"><a href="#cb6-57" aria-hidden="true" tabindex="-1"></a>            nn.Dropout(dropout)</span>
+<span id="cb6-58"><a href="#cb6-58" aria-hidden="true" tabindex="-1"></a>        )</span>
+<span id="cb6-59"><a href="#cb6-59" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb6-60"><a href="#cb6-60" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> forward(<span class="va">self</span>, x):</span>
+<span id="cb6-61"><a href="#cb6-61" aria-hidden="true" tabindex="-1"></a>        x <span class="op">=</span> x <span class="op">+</span> <span class="va">self</span>.attn(<span class="va">self</span>.norm1(x))</span>
+<span id="cb6-62"><a href="#cb6-62" aria-hidden="true" tabindex="-1"></a>        x <span class="op">=</span> x <span class="op">+</span> <span class="va">self</span>.mlp(<span class="va">self</span>.norm2(x))</span>
+<span id="cb6-63"><a href="#cb6-63" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> x</span>
+<span id="cb6-64"><a href="#cb6-64" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-65"><a href="#cb6-65" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> PerformerForPortfolio(nn.Module):</span>
+<span id="cb6-66"><a href="#cb6-66" aria-hidden="true" tabindex="-1"></a>    <span class="co">"""</span></span>
+<span id="cb6-67"><a href="#cb6-67" aria-hidden="true" tabindex="-1"></a><span class="co">    Performer model for portfolio optimization</span></span>
+<span id="cb6-68"><a href="#cb6-68" aria-hidden="true" tabindex="-1"></a><span class="co">    """</span></span>
+<span id="cb6-69"><a href="#cb6-69" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__init__</span>(<span class="va">self</span>, num_assets, seq_length, dim<span class="op">=</span><span class="dv">64</span>, depth<span class="op">=</span><span class="dv">4</span>, heads<span class="op">=</span><span class="dv">4</span>, mlp_dim<span class="op">=</span><span class="dv">128</span>, dropout<span class="op">=</span><span class="fl">0.1</span>):</span>
+<span id="cb6-70"><a href="#cb6-70" aria-hidden="true" tabindex="-1"></a>        <span class="bu">super</span>().<span class="fu">__init__</span>()</span>
+<span id="cb6-71"><a href="#cb6-71" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.num_assets <span class="op">=</span> num_assets</span>
+<span id="cb6-72"><a href="#cb6-72" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb6-73"><a href="#cb6-73" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Embedding layers</span></span>
+<span id="cb6-74"><a href="#cb6-74" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.asset_embedding <span class="op">=</span> nn.Embedding(num_assets, dim)</span>
+<span id="cb6-75"><a href="#cb6-75" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.pos_embedding <span class="op">=</span> nn.Parameter(torch.randn(<span class="dv">1</span>, seq_length, dim))</span>
+<span id="cb6-76"><a href="#cb6-76" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.input_projection <span class="op">=</span> nn.Linear(<span class="dv">1</span>, dim)  <span class="co"># Project price/return to embedding dimension</span></span>
+<span id="cb6-77"><a href="#cb6-77" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb6-78"><a href="#cb6-78" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Transformer blocks</span></span>
+<span id="cb6-79"><a href="#cb6-79" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.transformer_blocks <span class="op">=</span> nn.ModuleList([</span>
+<span id="cb6-80"><a href="#cb6-80" aria-hidden="true" tabindex="-1"></a>            PerformerBlock(dim, heads, mlp_dim, dropout) <span class="cf">for</span> _ <span class="kw">in</span> <span class="bu">range</span>(depth)</span>
+<span id="cb6-81"><a href="#cb6-81" aria-hidden="true" tabindex="-1"></a>        ])</span>
+<span id="cb6-82"><a href="#cb6-82" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb6-83"><a href="#cb6-83" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Output layers</span></span>
+<span id="cb6-84"><a href="#cb6-84" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.norm <span class="op">=</span> nn.LayerNorm(dim)</span>
+<span id="cb6-85"><a href="#cb6-85" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.pool <span class="op">=</span> nn.AdaptiveAvgPool1d(<span class="dv">1</span>)</span>
+<span id="cb6-86"><a href="#cb6-86" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.to_weights <span class="op">=</span> nn.Sequential(</span>
+<span id="cb6-87"><a href="#cb6-87" aria-hidden="true" tabindex="-1"></a>            nn.Linear(dim <span class="op">*</span> num_assets, <span class="dv">128</span>),</span>
+<span id="cb6-88"><a href="#cb6-88" aria-hidden="true" tabindex="-1"></a>            nn.ReLU(),</span>
+<span id="cb6-89"><a href="#cb6-89" aria-hidden="true" tabindex="-1"></a>            nn.Linear(<span class="dv">128</span>, num_assets),</span>
+<span id="cb6-90"><a href="#cb6-90" aria-hidden="true" tabindex="-1"></a>            nn.Softmax(dim<span class="op">=</span><span class="dv">1</span>)  <span class="co"># Ensure weights sum to 1</span></span>
+<span id="cb6-91"><a href="#cb6-91" aria-hidden="true" tabindex="-1"></a>        )</span>
+<span id="cb6-92"><a href="#cb6-92" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb6-93"><a href="#cb6-93" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> forward(<span class="va">self</span>, x):</span>
+<span id="cb6-94"><a href="#cb6-94" aria-hidden="true" tabindex="-1"></a>        b, n, t <span class="op">=</span> x.shape  <span class="co"># batch, num_assets, time_steps</span></span>
+<span id="cb6-95"><a href="#cb6-95" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb6-96"><a href="#cb6-96" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Create asset indices and expand to match batch size</span></span>
+<span id="cb6-97"><a href="#cb6-97" aria-hidden="true" tabindex="-1"></a>        asset_indices <span class="op">=</span> torch.arange(n, device<span class="op">=</span>x.device)</span>
+<span id="cb6-98"><a href="#cb6-98" aria-hidden="true" tabindex="-1"></a>        asset_indices <span class="op">=</span> asset_indices.unsqueeze(<span class="dv">0</span>).expand(b, <span class="op">-</span><span class="dv">1</span>)</span>
+<span id="cb6-99"><a href="#cb6-99" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb6-100"><a href="#cb6-100" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Get asset embeddings</span></span>
+<span id="cb6-101"><a href="#cb6-101" aria-hidden="true" tabindex="-1"></a>        asset_emb <span class="op">=</span> <span class="va">self</span>.asset_embedding(asset_indices)  <span class="co"># (b, n, dim)</span></span>
+<span id="cb6-102"><a href="#cb6-102" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb6-103"><a href="#cb6-103" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Process each asset's time series</span></span>
+<span id="cb6-104"><a href="#cb6-104" aria-hidden="true" tabindex="-1"></a>        outputs <span class="op">=</span> []</span>
+<span id="cb6-105"><a href="#cb6-105" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(n):</span>
+<span id="cb6-106"><a href="#cb6-106" aria-hidden="true" tabindex="-1"></a>            <span class="co"># Get time series for current asset</span></span>
+<span id="cb6-107"><a href="#cb6-107" aria-hidden="true" tabindex="-1"></a>            asset_x <span class="op">=</span> x[:, i, :].unsqueeze(<span class="op">-</span><span class="dv">1</span>)  <span class="co"># (b, t, 1)</span></span>
+<span id="cb6-108"><a href="#cb6-108" aria-hidden="true" tabindex="-1"></a>            </span>
+<span id="cb6-109"><a href="#cb6-109" aria-hidden="true" tabindex="-1"></a>            <span class="co"># Project to embedding dimension</span></span>
+<span id="cb6-110"><a href="#cb6-110" aria-hidden="true" tabindex="-1"></a>            asset_x <span class="op">=</span> <span class="va">self</span>.input_projection(asset_x)  <span class="co"># (b, t, dim)</span></span>
+<span id="cb6-111"><a href="#cb6-111" aria-hidden="true" tabindex="-1"></a>            </span>
+<span id="cb6-112"><a href="#cb6-112" aria-hidden="true" tabindex="-1"></a>            <span class="co"># Add positional embeddings</span></span>
+<span id="cb6-113"><a href="#cb6-113" aria-hidden="true" tabindex="-1"></a>            asset_x <span class="op">=</span> asset_x <span class="op">+</span> <span class="va">self</span>.pos_embedding[:, :t, :]</span>
+<span id="cb6-114"><a href="#cb6-114" aria-hidden="true" tabindex="-1"></a>            </span>
+<span id="cb6-115"><a href="#cb6-115" aria-hidden="true" tabindex="-1"></a>            <span class="co"># Add asset embedding</span></span>
+<span id="cb6-116"><a href="#cb6-116" aria-hidden="true" tabindex="-1"></a>            asset_x <span class="op">=</span> asset_x <span class="op">+</span> asset_emb[:, i, :].unsqueeze(<span class="dv">1</span>)</span>
+<span id="cb6-117"><a href="#cb6-117" aria-hidden="true" tabindex="-1"></a>            </span>
+<span id="cb6-118"><a href="#cb6-118" aria-hidden="true" tabindex="-1"></a>            <span class="co"># Pass through transformer blocks</span></span>
+<span id="cb6-119"><a href="#cb6-119" aria-hidden="true" tabindex="-1"></a>            <span class="cf">for</span> block <span class="kw">in</span> <span class="va">self</span>.transformer_blocks:</span>
+<span id="cb6-120"><a href="#cb6-120" aria-hidden="true" tabindex="-1"></a>                asset_x <span class="op">=</span> block(asset_x)</span>
+<span id="cb6-121"><a href="#cb6-121" aria-hidden="true" tabindex="-1"></a>            </span>
+<span id="cb6-122"><a href="#cb6-122" aria-hidden="true" tabindex="-1"></a>            <span class="co"># Apply normalization</span></span>
+<span id="cb6-123"><a href="#cb6-123" aria-hidden="true" tabindex="-1"></a>            asset_x <span class="op">=</span> <span class="va">self</span>.norm(asset_x)</span>
+<span id="cb6-124"><a href="#cb6-124" aria-hidden="true" tabindex="-1"></a>            </span>
+<span id="cb6-125"><a href="#cb6-125" aria-hidden="true" tabindex="-1"></a>            <span class="co"># Pool across time dimension</span></span>
+<span id="cb6-126"><a href="#cb6-126" aria-hidden="true" tabindex="-1"></a>            asset_x <span class="op">=</span> asset_x.transpose(<span class="dv">1</span>, <span class="dv">2</span>)  <span class="co"># (b, dim, t)</span></span>
+<span id="cb6-127"><a href="#cb6-127" aria-hidden="true" tabindex="-1"></a>            asset_x <span class="op">=</span> <span class="va">self</span>.pool(asset_x).squeeze(<span class="op">-</span><span class="dv">1</span>)  <span class="co"># (b, dim)</span></span>
+<span id="cb6-128"><a href="#cb6-128" aria-hidden="true" tabindex="-1"></a>            </span>
+<span id="cb6-129"><a href="#cb6-129" aria-hidden="true" tabindex="-1"></a>            outputs.append(asset_x)</span>
+<span id="cb6-130"><a href="#cb6-130" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb6-131"><a href="#cb6-131" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Concatenate outputs for all assets</span></span>
+<span id="cb6-132"><a href="#cb6-132" aria-hidden="true" tabindex="-1"></a>        x <span class="op">=</span> torch.cat(outputs, dim<span class="op">=</span><span class="dv">1</span>)  <span class="co"># (b, dim * num_assets)</span></span>
+<span id="cb6-133"><a href="#cb6-133" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb6-134"><a href="#cb6-134" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Generate portfolio weights</span></span>
+<span id="cb6-135"><a href="#cb6-135" aria-hidden="true" tabindex="-1"></a>        weights <span class="op">=</span> <span class="va">self</span>.to_weights(x)  <span class="co"># (b, num_assets)</span></span>
+<span id="cb6-136"><a href="#cb6-136" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb6-137"><a href="#cb6-137" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> weights</span>
+<span id="cb6-138"><a href="#cb6-138" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-139"><a href="#cb6-139" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> train_performer_model(returns, seq_length<span class="op">=</span><span class="dv">60</span>, epochs<span class="op">=</span><span class="dv">100</span>, batch_size<span class="op">=</span><span class="dv">32</span>, learning_rate<span class="op">=</span><span class="fl">0.001</span>):</span>
+<span id="cb6-140"><a href="#cb6-140" aria-hidden="true" tabindex="-1"></a>    <span class="co">"""</span></span>
+<span id="cb6-141"><a href="#cb6-141" aria-hidden="true" tabindex="-1"></a><span class="co">    Train the Performer model for portfolio optimization</span></span>
+<span id="cb6-142"><a href="#cb6-142" aria-hidden="true" tabindex="-1"></a><span class="co">    """</span></span>
+<span id="cb6-143"><a href="#cb6-143" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Prepare the data</span></span>
+<span id="cb6-144"><a href="#cb6-144" aria-hidden="true" tabindex="-1"></a>    num_assets <span class="op">=</span> returns.shape[<span class="dv">1</span>]</span>
+<span id="cb6-145"><a href="#cb6-145" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb6-146"><a href="#cb6-146" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Create sequences of returns</span></span>
+<span id="cb6-147"><a href="#cb6-147" aria-hidden="true" tabindex="-1"></a>    sequences <span class="op">=</span> []</span>
+<span id="cb6-148"><a href="#cb6-148" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(<span class="bu">len</span>(returns) <span class="op">-</span> seq_length):</span>
+<span id="cb6-149"><a href="#cb6-149" aria-hidden="true" tabindex="-1"></a>        seq <span class="op">=</span> returns.iloc[i:i<span class="op">+</span>seq_length].values</span>
+<span id="cb6-150"><a href="#cb6-150" aria-hidden="true" tabindex="-1"></a>        sequences.append(seq)</span>
+<span id="cb6-151"><a href="#cb6-151" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb6-152"><a href="#cb6-152" aria-hidden="true" tabindex="-1"></a>    sequences <span class="op">=</span> np.array(sequences)</span>
+<span id="cb6-153"><a href="#cb6-153" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb6-154"><a href="#cb6-154" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Split into training and validation sets</span></span>
+<span id="cb6-155"><a href="#cb6-155" aria-hidden="true" tabindex="-1"></a>    train_data, val_data <span class="op">=</span> train_test_split(sequences, test_size<span class="op">=</span><span class="fl">0.2</span>, random_state<span class="op">=</span><span class="dv">42</span>)</span>
+<span id="cb6-156"><a href="#cb6-156" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb6-157"><a href="#cb6-157" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Convert to PyTorch tensors</span></span>
+<span id="cb6-158"><a href="#cb6-158" aria-hidden="true" tabindex="-1"></a>    train_data <span class="op">=</span> torch.tensor(train_data, dtype<span class="op">=</span>torch.float32)</span>
+<span id="cb6-159"><a href="#cb6-159" aria-hidden="true" tabindex="-1"></a>    val_data <span class="op">=</span> torch.tensor(val_data, dtype<span class="op">=</span>torch.float32)</span>
+<span id="cb6-160"><a href="#cb6-160" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb6-161"><a href="#cb6-161" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Create data loaders</span></span>
+<span id="cb6-162"><a href="#cb6-162" aria-hidden="true" tabindex="-1"></a>    train_loader <span class="op">=</span> torch.utils.data.DataLoader(train_data, batch_size<span class="op">=</span>batch_size, shuffle<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb6-163"><a href="#cb6-163" aria-hidden="true" tabindex="-1"></a>    val_loader <span class="op">=</span> torch.utils.data.DataLoader(val_data, batch_size<span class="op">=</span>batch_size)</span>
+<span id="cb6-164"><a href="#cb6-164" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb6-165"><a href="#cb6-165" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Initialize the model</span></span>
+<span id="cb6-166"><a href="#cb6-166" aria-hidden="true" tabindex="-1"></a>    model <span class="op">=</span> PerformerForPortfolio(num_assets, seq_length)</span>
+<span id="cb6-167"><a href="#cb6-167" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb6-168"><a href="#cb6-168" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Define loss function and optimizer</span></span>
+<span id="cb6-169"><a href="#cb6-169" aria-hidden="true" tabindex="-1"></a>    criterion <span class="op">=</span> nn.MSELoss()</span>
+<span id="cb6-170"><a href="#cb6-170" aria-hidden="true" tabindex="-1"></a>    optimizer <span class="op">=</span> optim.Adam(model.parameters(), lr<span class="op">=</span>learning_rate)</span>
+<span id="cb6-171"><a href="#cb6-171" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb6-172"><a href="#cb6-172" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Training loop</span></span>
+<span id="cb6-173"><a href="#cb6-173" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> epoch <span class="kw">in</span> <span class="bu">range</span>(epochs):</span>
+<span id="cb6-174"><a href="#cb6-174" aria-hidden="true" tabindex="-1"></a>        model.train()</span>
+<span id="cb6-175"><a href="#cb6-175" aria-hidden="true" tabindex="-1"></a>        train_loss <span class="op">=</span> <span class="dv">0</span></span>
+<span id="cb6-176"><a href="#cb6-176" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb6-177"><a href="#cb6-177" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> batch <span class="kw">in</span> train_loader:</span>
+<span id="cb6-178"><a href="#cb6-178" aria-hidden="true" tabindex="-1"></a>            optimizer.zero_grad()</span>
+<span id="cb6-179"><a href="#cb6-179" aria-hidden="true" tabindex="-1"></a>            </span>
+<span id="cb6-180"><a href="#cb6-180" aria-hidden="true" tabindex="-1"></a>            <span class="co"># Forward pass</span></span>
+<span id="cb6-181"><a href="#cb6-181" aria-hidden="true" tabindex="-1"></a>            weights <span class="op">=</span> model(batch.transpose(<span class="dv">1</span>, <span class="dv">2</span>))</span>
+<span id="cb6-182"><a href="#cb6-182" aria-hidden="true" tabindex="-1"></a>            </span>
+<span id="cb6-183"><a href="#cb6-183" aria-hidden="true" tabindex="-1"></a>            <span class="co"># Calculate returns for the next day</span></span>
+<span id="cb6-184"><a href="#cb6-184" aria-hidden="true" tabindex="-1"></a>            next_day_returns <span class="op">=</span> torch.tensor(returns.iloc[seq_length:seq_length<span class="op">+</span><span class="bu">len</span>(batch)].values, dtype<span class="op">=</span>torch.float32)</span>
+<span id="cb6-185"><a href="#cb6-185" aria-hidden="true" tabindex="-1"></a>            </span>
+<span id="cb6-186"><a href="#cb6-186" aria-hidden="true" tabindex="-1"></a>            <span class="co"># Calculate portfolio return</span></span>
+<span id="cb6-187"><a href="#cb6-187" aria-hidden="true" tabindex="-1"></a>            portfolio_return <span class="op">=</span> torch.<span class="bu">sum</span>(weights <span class="op">*</span> next_day_returns, dim<span class="op">=</span><span class="dv">1</span>)</span>
+<span id="cb6-188"><a href="#cb6-188" aria-hidden="true" tabindex="-1"></a>            </span>
+<span id="cb6-189"><a href="#cb6-189" aria-hidden="true" tabindex="-1"></a>            <span class="co"># Calculate negative Sharpe ratio as loss</span></span>
+<span id="cb6-190"><a href="#cb6-190" aria-hidden="true" tabindex="-1"></a>            mean_return <span class="op">=</span> torch.mean(portfolio_return)</span>
+<span id="cb6-191"><a href="#cb6-191" aria-hidden="true" tabindex="-1"></a>            std_return <span class="op">=</span> torch.std(portfolio_return) <span class="op">+</span> <span class="fl">1e-6</span>  <span class="co"># Add small epsilon to avoid division by zero</span></span>
+<span id="cb6-192"><a href="#cb6-192" aria-hidden="true" tabindex="-1"></a>            sharpe_ratio <span class="op">=</span> mean_return <span class="op">/</span> std_return</span>
+<span id="cb6-193"><a href="#cb6-193" aria-hidden="true" tabindex="-1"></a>            loss <span class="op">=</span> <span class="op">-</span>sharpe_ratio</span>
+<span id="cb6-194"><a href="#cb6-194" aria-hidden="true" tabindex="-1"></a>            </span>
+<span id="cb6-195"><a href="#cb6-195" aria-hidden="true" tabindex="-1"></a>            <span class="co"># Backward pass and optimize</span></span>
+<span id="cb6-196"><a href="#cb6-196" aria-hidden="true" tabindex="-1"></a>            loss.backward()</span>
+<span id="cb6-197"><a href="#cb6-197" aria-hidden="true" tabindex="-1"></a>            optimizer.step()</span>
+<span id="cb6-198"><a href="#cb6-198" aria-hidden="true" tabindex="-1"></a>            </span>
+<span id="cb6-199"><a href="#cb6-199" aria-hidden="true" tabindex="-1"></a>            train_loss <span class="op">+=</span> loss.item()</span>
+<span id="cb6-200"><a href="#cb6-200" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb6-201"><a href="#cb6-201" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Validation</span></span>
+<span id="cb6-202"><a href="#cb6-202" aria-hidden="true" tabindex="-1"></a>        model.<span class="bu">eval</span>()</span>
+<span id="cb6-203"><a href="#cb6-203" aria-hidden="true" tabindex="-1"></a>        val_loss <span class="op">=</span> <span class="dv">0</span></span>
+<span id="cb6-204"><a href="#cb6-204" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb6-205"><a href="#cb6-205" aria-hidden="true" tabindex="-1"></a>        <span class="cf">with</span> torch.no_grad():</span>
+<span id="cb6-206"><a href="#cb6-206" aria-hidden="true" tabindex="-1"></a>            <span class="cf">for</span> batch <span class="kw">in</span> val_loader:</span>
+<span id="cb6-207"><a href="#cb6-207" aria-hidden="true" tabindex="-1"></a>                weights <span class="op">=</span> model(batch.transpose(<span class="dv">1</span>, <span class="dv">2</span>))</span>
+<span id="cb6-208"><a href="#cb6-208" aria-hidden="true" tabindex="-1"></a>                next_day_returns <span class="op">=</span> torch.tensor(returns.iloc[seq_length:seq_length<span class="op">+</span><span class="bu">len</span>(batch)].values, dtype<span class="op">=</span>torch.float32)</span>
+<span id="cb6-209"><a href="#cb6-209" aria-hidden="true" tabindex="-1"></a>                portfolio_return <span class="op">=</span> torch.<span class="bu">sum</span>(weights <span class="op">*</span> next_day_returns, dim<span class="op">=</span><span class="dv">1</span>)</span>
+<span id="cb6-210"><a href="#cb6-210" aria-hidden="true" tabindex="-1"></a>                mean_return <span class="op">=</span> torch.mean(portfolio_return)</span>
+<span id="cb6-211"><a href="#cb6-211" aria-hidden="true" tabindex="-1"></a>                std_return <span class="op">=</span> torch.std(portfolio_return) <span class="op">+</span> <span class="fl">1e-6</span></span>
+<span id="cb6-212"><a href="#cb6-212" aria-hidden="true" tabindex="-1"></a>                sharpe_ratio <span class="op">=</span> mean_return <span class="op">/</span> std_return</span>
+<span id="cb6-213"><a href="#cb6-213" aria-hidden="true" tabindex="-1"></a>                val_loss <span class="op">+=</span> <span class="op">-</span>sharpe_ratio.item()</span>
+<span id="cb6-214"><a href="#cb6-214" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb6-215"><a href="#cb6-215" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Print progress</span></span>
+<span id="cb6-216"><a href="#cb6-216" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> (epoch <span class="op">+</span> <span class="dv">1</span>) <span class="op">%</span> <span class="dv">10</span> <span class="op">==</span> <span class="dv">0</span>:</span>
+<span id="cb6-217"><a href="#cb6-217" aria-hidden="true" tabindex="-1"></a>            <span class="bu">print</span>(<span class="ss">f'Epoch </span><span class="sc">{</span>epoch<span class="op">+</span><span class="dv">1</span><span class="sc">}</span><span class="ss">/</span><span class="sc">{</span>epochs<span class="sc">}</span><span class="ss">, Train Loss: </span><span class="sc">{</span>train_loss<span class="op">/</span><span class="bu">len</span>(train_loader)<span class="sc">:.4f}</span><span class="ss">, Val Loss: </span><span class="sc">{</span>val_loss<span class="op">/</span><span class="bu">len</span>(val_loader)<span class="sc">:.4f}</span><span class="ss">'</span>)</span>
+<span id="cb6-218"><a href="#cb6-218" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb6-219"><a href="#cb6-219" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> model</span>
+<span id="cb6-220"><a href="#cb6-220" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-221"><a href="#cb6-221" aria-hidden="true" tabindex="-1"></a><span class="co"># Train the Performer model</span></span>
+<span id="cb6-222"><a href="#cb6-222" aria-hidden="true" tabindex="-1"></a>performer_model <span class="op">=</span> train_performer_model(returns)</span>
+<span id="cb6-223"><a href="#cb6-223" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-224"><a href="#cb6-224" aria-hidden="true" tabindex="-1"></a><span class="co"># Generate portfolio weights using the trained model</span></span>
+<span id="cb6-225"><a href="#cb6-225" aria-hidden="true" tabindex="-1"></a><span class="cf">with</span> torch.no_grad():</span>
+<span id="cb6-226"><a href="#cb6-226" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Use the most recent sequence of returns for prediction</span></span>
+<span id="cb6-227"><a href="#cb6-227" aria-hidden="true" tabindex="-1"></a>    recent_returns <span class="op">=</span> torch.tensor(returns.iloc[<span class="op">-</span><span class="dv">60</span>:].values, dtype<span class="op">=</span>torch.float32).unsqueeze(<span class="dv">0</span>)</span>
+<span id="cb6-228"><a href="#cb6-228" aria-hidden="true" tabindex="-1"></a>    performer_weights <span class="op">=</span> performer_model(recent_returns.transpose(<span class="dv">1</span>, <span class="dv">2</span>)).squeeze().numpy()</span>
+<span id="cb6-229"><a href="#cb6-229" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-230"><a href="#cb6-230" aria-hidden="true" tabindex="-1"></a><span class="co"># Calculate performance metrics for the Performer model</span></span>
+<span id="cb6-231"><a href="#cb6-231" aria-hidden="true" tabindex="-1"></a>performer_performance <span class="op">=</span> calculate_portfolio_performance(performer_weights, returns)</span>
+<span id="cb6-232"><a href="#cb6-232" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-233"><a href="#cb6-233" aria-hidden="true" tabindex="-1"></a><span class="co"># Display the results</span></span>
+<span id="cb6-234"><a href="#cb6-234" aria-hidden="true" tabindex="-1"></a>performer_results <span class="op">=</span> pd.DataFrame({</span>
+<span id="cb6-235"><a href="#cb6-235" aria-hidden="true" tabindex="-1"></a>    <span class="st">'Asset'</span>: returns.columns,</span>
+<span id="cb6-236"><a href="#cb6-236" aria-hidden="true" tabindex="-1"></a>    <span class="st">'Weight'</span>: performer_weights</span>
+<span id="cb6-237"><a href="#cb6-237" aria-hidden="true" tabindex="-1"></a>})</span>
+<span id="cb6-238"><a href="#cb6-238" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-239"><a href="#cb6-239" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">"Performer Model Results:"</span>)</span>
+<span id="cb6-240"><a href="#cb6-240" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Expected Annual Return: </span><span class="sc">{</span>performer_performance[<span class="dv">0</span>]<span class="sc">:.4f}</span><span class="ss">"</span>)</span>
+<span id="cb6-241"><a href="#cb6-241" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Expected Annual Volatility: </span><span class="sc">{</span>performer_performance[<span class="dv">1</span>]<span class="sc">:.4f}</span><span class="ss">"</span>)</span>
+<span id="cb6-242"><a href="#cb6-242" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Sharpe Ratio: </span><span class="sc">{</span>performer_performance[<span class="dv">2</span>]<span class="sc">:.4f}</span><span class="ss">"</span>)</span>
+<span id="cb6-243"><a href="#cb6-243" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">"</span><span class="ch">\n</span><span class="st">Optimal Portfolio Weights:"</span>)</span>
+<span id="cb6-244"><a href="#cb6-244" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(performer_results)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code>Epoch 10/100, Train Loss: -0.6600, Val Loss: -0.6102
+Epoch 20/100, Train Loss: -0.6590, Val Loss: -0.6091
+Epoch 30/100, Train Loss: -0.6590, Val Loss: -0.6088
+Epoch 40/100, Train Loss: -0.6593, Val Loss: -0.6082
+Epoch 50/100, Train Loss: -0.6578, Val Loss: -0.6112
+Epoch 60/100, Train Loss: -0.6602, Val Loss: -0.6080
+Epoch 70/100, Train Loss: -0.6602, Val Loss: -0.6079
+Epoch 80/100, Train Loss: -0.6601, Val Loss: -0.6082
+Epoch 90/100, Train Loss: -0.6590, Val Loss: -0.6097
+Epoch 100/100, Train Loss: -0.6603, Val Loss: -0.6082
+Performer Model Results:
+Expected Annual Return: 0.3081
+Expected Annual Volatility: 0.1515
+Sharpe Ratio: 2.0343
+
+Optimal Portfolio Weights:
+         Asset    Weight
+0   META_Close  0.032575
+1    JNJ_Close  0.341574
+2      V_Close  0.000060
+3   NVDA_Close  0.227237
+4    CVX_Close  0.000019
+5   AVGO_Close  0.000029
+6   TSLA_Close  0.000007
+7   AMZN_Close  0.000015
+8   MSFT_Close  0.000019
+9   ABBV_Close  0.135703
+10   JPM_Close  0.062520
+11  AAPL_Close  0.200242</code></pre>
+</div>
+</div>
+</section>
+</section>
+<section id="performance-comparison" class="level1" data-number="4">
+<h1 data-number="4"><span class="header-section-number">4</span> Performance Comparison</h1>
+<p>Let’s compare the performance of both approaches:</p>
+<div id="7f7e4962" class="cell" data-execution_count="5">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Create a DataFrame to compare the results</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>comparison <span class="op">=</span> pd.DataFrame({</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>    <span class="st">'Asset'</span>: returns.columns,</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>    <span class="st">'MVO Weight'</span>: mvo_weights,</span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>    <span class="st">'Performer Weight'</span>: performer_weights</span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>})</span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Calculate the difference in weights</span></span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>comparison[<span class="st">'Weight Difference'</span>] <span class="op">=</span> comparison[<span class="st">'Performer Weight'</span>] <span class="op">-</span> comparison[<span class="st">'MVO Weight'</span>]</span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a><span class="co"># Display the comparison</span></span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">"Portfolio Weight Comparison:"</span>)</span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(comparison)</span>
+<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a><span class="co"># Create a summary of performance metrics</span></span>
+<span id="cb8-16"><a href="#cb8-16" aria-hidden="true" tabindex="-1"></a>performance_summary <span class="op">=</span> pd.DataFrame({</span>
+<span id="cb8-17"><a href="#cb8-17" aria-hidden="true" tabindex="-1"></a>    <span class="st">'Metric'</span>: [<span class="st">'Expected Annual Return'</span>, <span class="st">'Expected Annual Volatility'</span>, <span class="st">'Sharpe Ratio'</span>],</span>
+<span id="cb8-18"><a href="#cb8-18" aria-hidden="true" tabindex="-1"></a>    <span class="st">'Mean-Variance Optimization'</span>: [mvo_performance[<span class="dv">0</span>], mvo_performance[<span class="dv">1</span>], mvo_performance[<span class="dv">2</span>]],</span>
+<span id="cb8-19"><a href="#cb8-19" aria-hidden="true" tabindex="-1"></a>    <span class="st">'Performer Model'</span>: [performer_performance[<span class="dv">0</span>], performer_performance[<span class="dv">1</span>], performer_performance[<span class="dv">2</span>]],</span>
+<span id="cb8-20"><a href="#cb8-20" aria-hidden="true" tabindex="-1"></a>    <span class="st">'Difference'</span>: [performer_performance[<span class="dv">0</span>] <span class="op">-</span> mvo_performance[<span class="dv">0</span>], </span>
+<span id="cb8-21"><a href="#cb8-21" aria-hidden="true" tabindex="-1"></a>                  performer_performance[<span class="dv">1</span>] <span class="op">-</span> mvo_performance[<span class="dv">1</span>], </span>
+<span id="cb8-22"><a href="#cb8-22" aria-hidden="true" tabindex="-1"></a>                  performer_performance[<span class="dv">2</span>] <span class="op">-</span> mvo_performance[<span class="dv">2</span>]]</span>
+<span id="cb8-23"><a href="#cb8-23" aria-hidden="true" tabindex="-1"></a>})</span>
+<span id="cb8-24"><a href="#cb8-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-25"><a href="#cb8-25" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">"</span><span class="ch">\n</span><span class="st">Performance Metric Comparison:"</span>)</span>
+<span id="cb8-26"><a href="#cb8-26" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(performance_summary)</span>
+<span id="cb8-27"><a href="#cb8-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-28"><a href="#cb8-28" aria-hidden="true" tabindex="-1"></a><span class="co"># Visualize the weight allocation</span></span>
+<span id="cb8-29"><a href="#cb8-29" aria-hidden="true" tabindex="-1"></a>plt.figure(figsize<span class="op">=</span>(<span class="dv">14</span>, <span class="dv">8</span>))</span>
+<span id="cb8-30"><a href="#cb8-30" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-31"><a href="#cb8-31" aria-hidden="true" tabindex="-1"></a><span class="co"># Create a bar chart for weight comparison</span></span>
+<span id="cb8-32"><a href="#cb8-32" aria-hidden="true" tabindex="-1"></a>x <span class="op">=</span> np.arange(<span class="bu">len</span>(returns.columns))</span>
+<span id="cb8-33"><a href="#cb8-33" aria-hidden="true" tabindex="-1"></a>width <span class="op">=</span> <span class="fl">0.35</span></span>
+<span id="cb8-34"><a href="#cb8-34" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-35"><a href="#cb8-35" aria-hidden="true" tabindex="-1"></a>plt.bar(x <span class="op">-</span> width<span class="op">/</span><span class="dv">2</span>, mvo_weights, width, label<span class="op">=</span><span class="st">'MVO'</span>)</span>
+<span id="cb8-36"><a href="#cb8-36" aria-hidden="true" tabindex="-1"></a>plt.bar(x <span class="op">+</span> width<span class="op">/</span><span class="dv">2</span>, performer_weights, width, label<span class="op">=</span><span class="st">'Performer'</span>)</span>
+<span id="cb8-37"><a href="#cb8-37" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-38"><a href="#cb8-38" aria-hidden="true" tabindex="-1"></a>plt.xlabel(<span class="st">'Assets'</span>)</span>
+<span id="cb8-39"><a href="#cb8-39" aria-hidden="true" tabindex="-1"></a>plt.ylabel(<span class="st">'Weight'</span>)</span>
+<span id="cb8-40"><a href="#cb8-40" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">'Portfolio Weight Allocation Comparison'</span>)</span>
+<span id="cb8-41"><a href="#cb8-41" aria-hidden="true" tabindex="-1"></a>plt.xticks(x, returns.columns, rotation<span class="op">=</span><span class="dv">45</span>)</span>
+<span id="cb8-42"><a href="#cb8-42" aria-hidden="true" tabindex="-1"></a>plt.legend()</span>
+<span id="cb8-43"><a href="#cb8-43" aria-hidden="true" tabindex="-1"></a>plt.tight_layout()</span>
+<span id="cb8-44"><a href="#cb8-44" aria-hidden="true" tabindex="-1"></a>plt.show()</span>
+<span id="cb8-45"><a href="#cb8-45" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-46"><a href="#cb8-46" aria-hidden="true" tabindex="-1"></a><span class="co"># Visualize the efficient frontier for MVO</span></span>
+<span id="cb8-47"><a href="#cb8-47" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> generate_efficient_frontier(returns, num_portfolios<span class="op">=</span><span class="dv">1000</span>):</span>
+<span id="cb8-48"><a href="#cb8-48" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Number of assets</span></span>
+<span id="cb8-49"><a href="#cb8-49" aria-hidden="true" tabindex="-1"></a>    num_assets <span class="op">=</span> <span class="bu">len</span>(returns.columns)</span>
+<span id="cb8-50"><a href="#cb8-50" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb8-51"><a href="#cb8-51" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Generate random weights</span></span>
+<span id="cb8-52"><a href="#cb8-52" aria-hidden="true" tabindex="-1"></a>    weights_record <span class="op">=</span> np.zeros((num_portfolios, num_assets))</span>
+<span id="cb8-53"><a href="#cb8-53" aria-hidden="true" tabindex="-1"></a>    returns_record <span class="op">=</span> np.zeros(num_portfolios)</span>
+<span id="cb8-54"><a href="#cb8-54" aria-hidden="true" tabindex="-1"></a>    volatility_record <span class="op">=</span> np.zeros(num_portfolios)</span>
+<span id="cb8-55"><a href="#cb8-55" aria-hidden="true" tabindex="-1"></a>    sharpe_record <span class="op">=</span> np.zeros(num_portfolios)</span>
+<span id="cb8-56"><a href="#cb8-56" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb8-57"><a href="#cb8-57" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(num_portfolios):</span>
+<span id="cb8-58"><a href="#cb8-58" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Generate random weights</span></span>
+<span id="cb8-59"><a href="#cb8-59" aria-hidden="true" tabindex="-1"></a>        weights <span class="op">=</span> np.random.random(num_assets)</span>
+<span id="cb8-60"><a href="#cb8-60" aria-hidden="true" tabindex="-1"></a>        weights <span class="op">=</span> weights <span class="op">/</span> np.<span class="bu">sum</span>(weights)</span>
+<span id="cb8-61"><a href="#cb8-61" aria-hidden="true" tabindex="-1"></a>        weights_record[i] <span class="op">=</span> weights</span>
+<span id="cb8-62"><a href="#cb8-62" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb8-63"><a href="#cb8-63" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Calculate portfolio performance</span></span>
+<span id="cb8-64"><a href="#cb8-64" aria-hidden="true" tabindex="-1"></a>        portfolio_return, portfolio_volatility, sharpe_ratio <span class="op">=</span> calculate_portfolio_performance(weights, returns)</span>
+<span id="cb8-65"><a href="#cb8-65" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb8-66"><a href="#cb8-66" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Record the results</span></span>
+<span id="cb8-67"><a href="#cb8-67" aria-hidden="true" tabindex="-1"></a>        returns_record[i] <span class="op">=</span> portfolio_return</span>
+<span id="cb8-68"><a href="#cb8-68" aria-hidden="true" tabindex="-1"></a>        volatility_record[i] <span class="op">=</span> portfolio_volatility</span>
+<span id="cb8-69"><a href="#cb8-69" aria-hidden="true" tabindex="-1"></a>        sharpe_record[i] <span class="op">=</span> sharpe_ratio</span>
+<span id="cb8-70"><a href="#cb8-70" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb8-71"><a href="#cb8-71" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> returns_record, volatility_record, sharpe_record, weights_record</span>
+<span id="cb8-72"><a href="#cb8-72" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-73"><a href="#cb8-73" aria-hidden="true" tabindex="-1"></a><span class="co"># Generate the efficient frontier</span></span>
+<span id="cb8-74"><a href="#cb8-74" aria-hidden="true" tabindex="-1"></a>returns_record, volatility_record, sharpe_record, weights_record <span class="op">=</span> generate_efficient_frontier(returns)</span>
+<span id="cb8-75"><a href="#cb8-75" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-76"><a href="#cb8-76" aria-hidden="true" tabindex="-1"></a><span class="co"># Plot the efficient frontier</span></span>
+<span id="cb8-77"><a href="#cb8-77" aria-hidden="true" tabindex="-1"></a>plt.figure(figsize<span class="op">=</span>(<span class="dv">12</span>, <span class="dv">8</span>))</span>
+<span id="cb8-78"><a href="#cb8-78" aria-hidden="true" tabindex="-1"></a>plt.scatter(volatility_record, returns_record, c<span class="op">=</span>sharpe_record, cmap<span class="op">=</span><span class="st">'viridis'</span>, marker<span class="op">=</span><span class="st">'o'</span>, s<span class="op">=</span><span class="dv">10</span>, alpha<span class="op">=</span><span class="fl">0.3</span>)</span>
+<span id="cb8-79"><a href="#cb8-79" aria-hidden="true" tabindex="-1"></a>plt.colorbar(label<span class="op">=</span><span class="st">'Sharpe Ratio'</span>)</span>
+<span id="cb8-80"><a href="#cb8-80" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-81"><a href="#cb8-81" aria-hidden="true" tabindex="-1"></a><span class="co"># Plot the MVO and Performer portfolios</span></span>
+<span id="cb8-82"><a href="#cb8-82" aria-hidden="true" tabindex="-1"></a>plt.scatter(mvo_performance[<span class="dv">1</span>], mvo_performance[<span class="dv">0</span>], c<span class="op">=</span><span class="st">'red'</span>, marker<span class="op">=</span><span class="st">'*'</span>, s<span class="op">=</span><span class="dv">300</span>, label<span class="op">=</span><span class="st">'MVO Portfolio'</span>)</span>
+<span id="cb8-83"><a href="#cb8-83" aria-hidden="true" tabindex="-1"></a>plt.scatter(performer_performance[<span class="dv">1</span>], performer_performance[<span class="dv">0</span>], c<span class="op">=</span><span class="st">'blue'</span>, marker<span class="op">=</span><span class="st">'*'</span>, s<span class="op">=</span><span class="dv">300</span>, label<span class="op">=</span><span class="st">'Performer Portfolio'</span>)</span>
+<span id="cb8-84"><a href="#cb8-84" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-85"><a href="#cb8-85" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">'Efficient Frontier'</span>)</span>
+<span id="cb8-86"><a href="#cb8-86" aria-hidden="true" tabindex="-1"></a>plt.xlabel(<span class="st">'Expected Volatility'</span>)</span>
+<span id="cb8-87"><a href="#cb8-87" aria-hidden="true" tabindex="-1"></a>plt.ylabel(<span class="st">'Expected Return'</span>)</span>
+<span id="cb8-88"><a href="#cb8-88" aria-hidden="true" tabindex="-1"></a>plt.legend()</span>
+<span id="cb8-89"><a href="#cb8-89" aria-hidden="true" tabindex="-1"></a>plt.grid(<span class="va">True</span>)</span>
+<span id="cb8-90"><a href="#cb8-90" aria-hidden="true" tabindex="-1"></a>plt.show()</span>
+<span id="cb8-91"><a href="#cb8-91" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-92"><a href="#cb8-92" aria-hidden="true" tabindex="-1"></a><span class="co"># Backtest the portfolios</span></span>
+<span id="cb8-93"><a href="#cb8-93" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> backtest_portfolio(weights, returns, window<span class="op">=</span><span class="dv">252</span>):</span>
+<span id="cb8-94"><a href="#cb8-94" aria-hidden="true" tabindex="-1"></a>    <span class="co">"""</span></span>
+<span id="cb8-95"><a href="#cb8-95" aria-hidden="true" tabindex="-1"></a><span class="co">    Backtest a portfolio with fixed weights over a rolling window</span></span>
+<span id="cb8-96"><a href="#cb8-96" aria-hidden="true" tabindex="-1"></a><span class="co">    """</span></span>
+<span id="cb8-97"><a href="#cb8-97" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Calculate daily portfolio returns</span></span>
+<span id="cb8-98"><a href="#cb8-98" aria-hidden="true" tabindex="-1"></a>    portfolio_returns <span class="op">=</span> np.<span class="bu">sum</span>(returns <span class="op">*</span> weights, axis<span class="op">=</span><span class="dv">1</span>)</span>
+<span id="cb8-99"><a href="#cb8-99" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb8-100"><a href="#cb8-100" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Calculate cumulative returns</span></span>
+<span id="cb8-101"><a href="#cb8-101" aria-hidden="true" tabindex="-1"></a>    cumulative_returns <span class="op">=</span> (<span class="dv">1</span> <span class="op">+</span> portfolio_returns).cumprod()</span>
+<span id="cb8-102"><a href="#cb8-102" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb8-103"><a href="#cb8-103" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Calculate rolling metrics</span></span>
+<span id="cb8-104"><a href="#cb8-104" aria-hidden="true" tabindex="-1"></a>    rolling_returns <span class="op">=</span> portfolio_returns.rolling(window<span class="op">=</span>window).mean() <span class="op">*</span> <span class="dv">252</span></span>
+<span id="cb8-105"><a href="#cb8-105" aria-hidden="true" tabindex="-1"></a>    rolling_volatility <span class="op">=</span> portfolio_returns.rolling(window<span class="op">=</span>window).std() <span class="op">*</span> np.sqrt(<span class="dv">252</span>)</span>
+<span id="cb8-106"><a href="#cb8-106" aria-hidden="true" tabindex="-1"></a>    rolling_sharpe <span class="op">=</span> rolling_returns <span class="op">/</span> rolling_volatility</span>
+<span id="cb8-107"><a href="#cb8-107" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb8-108"><a href="#cb8-108" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> portfolio_returns, cumulative_returns, rolling_returns, rolling_volatility, rolling_sharpe</span>
+<span id="cb8-109"><a href="#cb8-109" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-110"><a href="#cb8-110" aria-hidden="true" tabindex="-1"></a><span class="co"># Backtest both portfolios</span></span>
+<span id="cb8-111"><a href="#cb8-111" aria-hidden="true" tabindex="-1"></a>mvo_portfolio_returns, mvo_cumulative_returns, mvo_rolling_returns, mvo_rolling_volatility, mvo_rolling_sharpe <span class="op">=</span> backtest_portfolio(mvo_weights, returns)</span>
+<span id="cb8-112"><a href="#cb8-112" aria-hidden="true" tabindex="-1"></a>performer_portfolio_returns, performer_cumulative_returns, performer_rolling_returns, performer_rolling_volatility, performer_rolling_sharpe <span class="op">=</span> backtest_portfolio(performer_weights, returns)</span>
+<span id="cb8-113"><a href="#cb8-113" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-114"><a href="#cb8-114" aria-hidden="true" tabindex="-1"></a><span class="co"># Plot cumulative returns</span></span>
+<span id="cb8-115"><a href="#cb8-115" aria-hidden="true" tabindex="-1"></a>plt.figure(figsize<span class="op">=</span>(<span class="dv">14</span>, <span class="dv">8</span>))</span>
+<span id="cb8-116"><a href="#cb8-116" aria-hidden="true" tabindex="-1"></a>plt.plot(returns.index, mvo_cumulative_returns, label<span class="op">=</span><span class="st">'MVO Portfolio'</span>)</span>
+<span id="cb8-117"><a href="#cb8-117" aria-hidden="true" tabindex="-1"></a>plt.plot(returns.index, performer_cumulative_returns, label<span class="op">=</span><span class="st">'Performer Portfolio'</span>)</span>
+<span id="cb8-118"><a href="#cb8-118" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">'Cumulative Portfolio Returns'</span>)</span>
+<span id="cb8-119"><a href="#cb8-119" aria-hidden="true" tabindex="-1"></a>plt.xlabel(<span class="st">'Date'</span>)</span>
+<span id="cb8-120"><a href="#cb8-120" aria-hidden="true" tabindex="-1"></a>plt.ylabel(<span class="st">'Cumulative Return'</span>)</span>
+<span id="cb8-121"><a href="#cb8-121" aria-hidden="true" tabindex="-1"></a>plt.legend()</span>
+<span id="cb8-122"><a href="#cb8-122" aria-hidden="true" tabindex="-1"></a>plt.grid(<span class="va">True</span>)</span>
+<span id="cb8-123"><a href="#cb8-123" aria-hidden="true" tabindex="-1"></a>plt.show()</span>
+<span id="cb8-124"><a href="#cb8-124" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-125"><a href="#cb8-125" aria-hidden="true" tabindex="-1"></a><span class="co"># Plot rolling Sharpe ratio</span></span>
+<span id="cb8-126"><a href="#cb8-126" aria-hidden="true" tabindex="-1"></a>plt.figure(figsize<span class="op">=</span>(<span class="dv">14</span>, <span class="dv">8</span>))</span>
+<span id="cb8-127"><a href="#cb8-127" aria-hidden="true" tabindex="-1"></a>plt.plot(returns.index[<span class="dv">252</span>:], mvo_rolling_sharpe[<span class="dv">252</span>:], label<span class="op">=</span><span class="st">'MVO Portfolio'</span>)</span>
+<span id="cb8-128"><a href="#cb8-128" aria-hidden="true" tabindex="-1"></a>plt.plot(returns.index[<span class="dv">252</span>:], performer_rolling_sharpe[<span class="dv">252</span>:], label<span class="op">=</span><span class="st">'Performer Portfolio'</span>)</span>
+<span id="cb8-129"><a href="#cb8-129" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">'Rolling 1-Year Sharpe Ratio'</span>)</span>
+<span id="cb8-130"><a href="#cb8-130" aria-hidden="true" tabindex="-1"></a>plt.xlabel(<span class="st">'Date'</span>)</span>
+<span id="cb8-131"><a href="#cb8-131" aria-hidden="true" tabindex="-1"></a>plt.ylabel(<span class="st">'Sharpe Ratio'</span>)</span>
+<span id="cb8-132"><a href="#cb8-132" aria-hidden="true" tabindex="-1"></a>plt.legend()</span>
+<span id="cb8-133"><a href="#cb8-133" aria-hidden="true" tabindex="-1"></a>plt.grid(<span class="va">True</span>)</span>
+<span id="cb8-134"><a href="#cb8-134" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code>Portfolio Weight Comparison:
+         Asset    MVO Weight  Performer Weight  Weight Difference
+0   META_Close  1.054186e-01          0.032575          -0.072843
+1    JNJ_Close  2.133362e-01          0.341574           0.128238
+2      V_Close  8.423072e-02          0.000060          -0.084171
+3   NVDA_Close  1.218212e-01          0.227237           0.105416
+4    CVX_Close  1.683505e-02          0.000019          -0.016816
+5   AVGO_Close  2.797209e-02          0.000029          -0.027944
+6   TSLA_Close  5.642671e-03          0.000007          -0.005635
+7   AMZN_Close  1.576081e-17          0.000015           0.000015
+8   MSFT_Close  3.586941e-16          0.000019           0.000019
+9   ABBV_Close  2.483961e-01          0.135703          -0.112694
+10   JPM_Close  1.563749e-01          0.062520          -0.093855
+11  AAPL_Close  1.997245e-02          0.200242           0.180270
+
+Performance Metric Comparison:
+                       Metric  Mean-Variance Optimization  Performer Model  \
+0      Expected Annual Return                    0.321662         0.308123   
+1  Expected Annual Volatility                    0.137179         0.151467   
+2                Sharpe Ratio                    2.344825         2.034255   
+
+   Difference  
+0   -0.013539  
+1    0.014288  
+2   -0.310570  </code></pre>
+</div>
+<div class="cell-output cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="portfolio_optimization_files/figure-html/cell-6-output-2.png" class="img-fluid figure-img"></p>
+</figure>
+</div>
+</div>
+<div class="cell-output cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="portfolio_optimization_files/figure-html/cell-6-output-3.png" class="img-fluid figure-img"></p>
+</figure>
+</div>
+</div>
+<div class="cell-output cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="portfolio_optimization_files/figure-html/cell-6-output-4.png" class="img-fluid figure-img"></p>
+</figure>
+</div>
+</div>
+<div class="cell-output cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="portfolio_optimization_files/figure-html/cell-6-output-5.png" class="img-fluid figure-img"></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="analysis-and-discussion" class="level1" data-number="5">
+<h1 data-number="5"><span class="header-section-number">5</span> Analysis and Discussion</h1>
+<section id="comparison-of-weight-allocations" class="level2" data-number="5.1">
+<h2 data-number="5.1" class="anchored" data-anchor-id="comparison-of-weight-allocations"><span class="header-section-number">5.1</span> Comparison of Weight Allocations</h2>
+<p>The weight allocations between the Mean-Variance Optimization (MVO) and the Performer Model show interesting differences. MVO tends to concentrate weights in assets with historically higher Sharpe ratios, while the Performer Model may distribute weights differently based on learned patterns in the time series data.</p>
+<p>The key differences in weight allocation can be attributed to:</p>
+<ol type="1">
+<li><p><strong>Linear vs.&nbsp;Non-linear Relationships</strong>: MVO assumes linear relationships between assets, while the Performer Model can capture non-linear dependencies through its attention mechanism.</p></li>
+<li><p><strong>Historical vs.&nbsp;Learned Patterns</strong>: MVO relies solely on historical means and covariances, while the Performer Model learns patterns from sequences of returns that may be predictive of future performance.</p></li>
+<li><p><strong>Static vs.&nbsp;Dynamic</strong>: MVO provides a static allocation based on the entire historical period, while the Performer Model can adapt to changing market conditions by focusing on more recent patterns.</p></li>
+</ol>
+</section>
+<section id="performance-metrics-comparison" class="level2" data-number="5.2">
+<h2 data-number="5.2" class="anchored" data-anchor-id="performance-metrics-comparison"><span class="header-section-number">5.2</span> Performance Metrics Comparison</h2>
+<p>When comparing the performance metrics:</p>
+<ol type="1">
+<li><p><strong>Expected Return</strong>: The Performer Model may achieve higher expected returns by identifying patterns that are not captured by simple historical averages.</p></li>
+<li><p><strong>Volatility</strong>: The Performer Model might achieve lower volatility by better understanding the complex relationships between assets and their changing correlations over time.</p></li>
+<li><p><strong>Sharpe Ratio</strong>: The overall risk-adjusted performance (Sharpe ratio) comparison shows whether the Performer Model’s ability to capture complex patterns translates into better risk-adjusted returns.</p></li>
+</ol>
+</section>
+<section id="strengths-and-limitations" class="level2" data-number="5.3">
+<h2 data-number="5.3" class="anchored" data-anchor-id="strengths-and-limitations"><span class="header-section-number">5.3</span> Strengths and Limitations</h2>
+<section id="mean-variance-optimization" class="level3" data-number="5.3.1">
+<h3 data-number="5.3.1" class="anchored" data-anchor-id="mean-variance-optimization"><span class="header-section-number">5.3.1</span> Mean-Variance Optimization</h3>
+<p><strong>Strengths:</strong> - Well-established theoretical foundation - Computationally efficient - Easy to interpret and implement - Works well in markets that follow assumptions of normal distributions</p>
+<p><strong>Limitations:</strong> - Assumes returns follow a normal distribution - Sensitive to estimation errors in expected returns - Cannot capture non-linear relationships - Static allocation that doesn’t adapt to changing market conditions</p>
+</section>
+<section id="performer-model" class="level3" data-number="5.3.2">
+<h3 data-number="5.3.2" class="anchored" data-anchor-id="performer-model"><span class="header-section-number">5.3.2</span> Performer Model</h3>
+<p><strong>Strengths:</strong> - Can capture complex non-linear relationships - Learns from sequential patterns in the data - Potentially adapts better to changing market conditions - Linear computational complexity makes it efficient for large datasets</p>
+<p><strong>Limitations:</strong> - Requires more data for training - More complex to implement and interpret - May overfit to historical patterns - Requires careful hyperparameter tuning</p>
+</section>
+</section>
+</section>
+<section id="conclusion" class="level1" data-number="6">
+<h1 data-number="6"><span class="header-section-number">6</span> Conclusion</h1>
+<p>This study compared the traditional Mean-Variance Optimization approach with the modern Performer Model (Linear Attention Transformer) for portfolio optimization. The results demonstrate the potential advantages and limitations of both approaches.</p>
+<p>The Performer Model shows promise in capturing complex patterns in financial time series data that may not be evident in simple statistical measures used by MVO. However, the effectiveness of the Performer Model depends on various factors, including the quality and quantity of training data, model architecture, and hyperparameter tuning.</p>
+<p>For practical applications, a hybrid approach might be beneficial, combining the theoretical foundation of MVO with the pattern recognition capabilities of the Performer Model. This could provide a more robust portfolio optimization framework that leverages the strengths of both approaches.</p>
+<p>Future research could explore: 1. Incorporating additional features beyond just returns 2. Testing on different asset classes and market conditions 3. Developing ensemble methods that combine multiple approaches 4. Exploring other variants of linear attention mechanisms</p>
+</section>
+<section id="references" class="level1" data-number="7">
+<h1 data-number="7"><span class="header-section-number">7</span> References</h1>
+<ol type="1">
+<li>Markowitz, H. (1952). Portfolio Selection. The Journal of Finance, 7(1), 77-91.</li>
+<li>Choromanski, K., Likhosherstov, V., Dohan, D., Song, X., Gane, A., Sarlos, T., … &amp; Weller, A. (2020). Rethinking Attention with Performers. arXiv preprint arXiv:2009.14794.</li>
+<li>Bodie, Z., Kane, A., &amp; Marcus, A. J. (2014). Investments (10th ed.). McGraw-Hill Education.</li>
+<li>Vaswani, A., Shazeer, N., Parmar, N., Uszkoreit, J., Jones, L., Gomez, A. N., … &amp; Polosukhin, I. (2017). Attention is all you need. Advances in neural information processing systems, 30.</li>
+</ol>
+</section>
+
+</main>
+<!-- /main column -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const isCodeAnnotation = (el) => {
+    for (const clz of el.classList) {
+      if (clz.startsWith('code-annotation-')) {                     
+        return true;
+      }
+    }
+    return false;
+  }
+  const onCopySuccess = function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  }
+  const getTextToCopy = function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+  }
+  const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+    text: getTextToCopy
+  });
+  clipboard.on('success', onCopySuccess);
+  if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+    // For code content inside modals, clipBoardJS needs to be initialized with a container option
+    // TODO: Check when it could be a function (https://github.com/zenorocha/clipboard.js/issues/860)
+    const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+      text: getTextToCopy,
+      container: window.document.getElementById('quarto-embedded-source-code-modal')
+    });
+    clipboardModal.on('success', onCopySuccess);
+  }
+    var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+    var mailtoRegex = new RegExp(/^mailto:/);
+      var filterRegex = new RegExp('/' + window.location.host + '/');
+    var isInternal = (href) => {
+        return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+    }
+    // Inspect non-navigation links and adorn them if external
+ 	var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+    for (var i=0; i<links.length; i++) {
+      const link = links[i];
+      if (!isInternal(link.href)) {
+        // undo the damage that might have been done by quarto-nav.js in the case of
+        // links that we want to consider external
+        if (link.dataset.originalHref !== undefined) {
+          link.href = link.dataset.originalHref;
+        }
+      }
+    }
+  function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+    const config = {
+      allowHTML: true,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start',
+    };
+    if (contentFn) {
+      config.content = contentFn;
+    }
+    if (onTriggerFn) {
+      config.onTrigger = onTriggerFn;
+    }
+    if (onUntriggerFn) {
+      config.onUntrigger = onUntriggerFn;
+    }
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      if (note) {
+        return note.innerHTML;
+      } else {
+        return "";
+      }
+    });
+  }
+  const xrefs = window.document.querySelectorAll('a.quarto-xref');
+  const processXRef = (id, note) => {
+    // Strip column container classes
+    const stripColumnClz = (el) => {
+      el.classList.remove("page-full", "page-columns");
+      if (el.children) {
+        for (const child of el.children) {
+          stripColumnClz(child);
+        }
+      }
+    }
+    stripColumnClz(note)
+    if (id === null || id.startsWith('sec-')) {
+      // Special case sections, only their first couple elements
+      const container = document.createElement("div");
+      if (note.children && note.children.length > 2) {
+        container.appendChild(note.children[0].cloneNode(true));
+        for (let i = 1; i < note.children.length; i++) {
+          const child = note.children[i];
+          if (child.tagName === "P" && child.innerText === "") {
+            continue;
+          } else {
+            container.appendChild(child.cloneNode(true));
+            break;
+          }
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(container);
+        }
+        return container.innerHTML
+      } else {
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        return note.innerHTML;
+      }
+    } else {
+      // Remove any anchor links if they are present
+      const anchorLink = note.querySelector('a.anchorjs-link');
+      if (anchorLink) {
+        anchorLink.remove();
+      }
+      if (window.Quarto?.typesetMath) {
+        window.Quarto.typesetMath(note);
+      }
+      // TODO in 1.5, we should make sure this works without a callout special case
+      if (note.classList.contains("callout")) {
+        return note.outerHTML;
+      } else {
+        return note.innerHTML;
+      }
+    }
+  }
+  for (var i=0; i<xrefs.length; i++) {
+    const xref = xrefs[i];
+    tippyHover(xref, undefined, function(instance) {
+      instance.disable();
+      let url = xref.getAttribute('href');
+      let hash = undefined; 
+      if (url.startsWith('#')) {
+        hash = url;
+      } else {
+        try { hash = new URL(url).hash; } catch {}
+      }
+      if (hash) {
+        const id = hash.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note !== null) {
+          try {
+            const html = processXRef(id, note.cloneNode(true));
+            instance.setContent(html);
+          } finally {
+            instance.enable();
+            instance.show();
+          }
+        } else {
+          // See if we can fetch this
+          fetch(url.split('#')[0])
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.getElementById(id);
+            if (note !== null) {
+              const html = processXRef(id, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      } else {
+        // See if we can fetch a full url (with no hash to target)
+        // This is a special case and we should probably do some content thinning / targeting
+        fetch(url)
+        .then(res => res.text())
+        .then(html => {
+          const parser = new DOMParser();
+          const htmlDoc = parser.parseFromString(html, "text/html");
+          const note = htmlDoc.querySelector('main.content');
+          if (note !== null) {
+            // This should only happen for chapter cross references
+            // (since there is no id in the URL)
+            // remove the first header
+            if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+              note.children[0].remove();
+            }
+            const html = processXRef(null, note);
+            instance.setContent(html);
+          } 
+        }).finally(() => {
+          instance.enable();
+          instance.show();
+        });
+      }
+    }, function(instance) {
+    });
+  }
+      let selectedAnnoteEl;
+      const selectorForAnnotation = ( cell, annotation) => {
+        let cellAttr = 'data-code-cell="' + cell + '"';
+        let lineAttr = 'data-code-annotation="' +  annotation + '"';
+        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+        return selector;
+      }
+      const selectCodeLines = (annoteEl) => {
+        const doc = window.document;
+        const targetCell = annoteEl.getAttribute("data-target-cell");
+        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+        const lineIds = lines.map((line) => {
+          return targetCell + "-" + line;
+        })
+        let top = null;
+        let height = null;
+        let parent = null;
+        if (lineIds.length > 0) {
+            //compute the position of the single el (top and bottom and make a div)
+            const el = window.document.getElementById(lineIds[0]);
+            top = el.offsetTop;
+            height = el.offsetHeight;
+            parent = el.parentElement.parentElement;
+          if (lineIds.length > 1) {
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+            height = bottom - top;
+          }
+          if (top !== null && height !== null && parent !== null) {
+            // cook up a div (if necessary) and position it 
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            div.style.top = top - 2 + "px";
+            div.style.height = height + 4 + "px";
+            div.style.left = 0;
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            gutterDiv.style.top = top - 2 + "px";
+            gutterDiv.style.height = height + 4 + "px";
+          }
+          selectedAnnoteEl = annoteEl;
+        }
+      };
+      const unselectCodeLines = () => {
+        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+        elementsIds.forEach((elId) => {
+          const div = window.document.getElementById(elId);
+          if (div) {
+            div.remove();
+          }
+        });
+        selectedAnnoteEl = undefined;
+      };
+        // Handle positioning of the toggle
+    window.addEventListener(
+      "resize",
+      throttle(() => {
+        elRect = undefined;
+        if (selectedAnnoteEl) {
+          selectCodeLines(selectedAnnoteEl);
+        }
+      }, 10)
+    );
+    function throttle(fn, ms) {
+    let throttle = false;
+    let timer;
+      return (...args) => {
+        if(!throttle) { // first call gets through
+            fn.apply(this, args);
+            throttle = true;
+        } else { // all the others get throttled
+            if(timer) clearTimeout(timer); // cancel #2
+            timer = setTimeout(() => {
+              fn.apply(this, args);
+              timer = throttle = false;
+            }, ms);
+        }
+      };
+    }
+      // Attach click handler to the DT
+      const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+      for (const annoteDlNode of annoteDls) {
+        annoteDlNode.addEventListener('click', (event) => {
+          const clickedEl = event.target;
+          if (clickedEl !== selectedAnnoteEl) {
+            unselectCodeLines();
+            const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+            if (activeEl) {
+              activeEl.classList.remove('code-annotation-active');
+            }
+            selectCodeLines(clickedEl);
+            clickedEl.classList.add('code-annotation-active');
+          } else {
+            // Unselect the line
+            unselectCodeLines();
+            clickedEl.classList.remove('code-annotation-active');
+          }
+        });
+      }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>
